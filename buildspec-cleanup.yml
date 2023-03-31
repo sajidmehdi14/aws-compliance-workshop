@@ -1,0 +1,26 @@
+version: 0.2
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - python --version
+  build:
+    commands:
+      - echo In buildspec-cleanup.yml Build started on `date`
+      - >-
+        AWS_REGION=$(curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone | sed 's/\(.*\)[a-z]/\1/')
+      - >-
+        aws s3api list-buckets --query 'Buckets[?starts_with(Name, `ccoa-cr`) == `true`].[Name]' --output text | xargs -I {} aws s3 rb s3://{} --force
+      - >-
+        sleep 20
+      - >-
+        aws cloudformation delete-stack --stack-name ccoa-cr
+      - >-
+        aws cloudformation wait stack-delete-complete --stack-name ccoa-cr
+  post_build:
+    commands:
+      - echo In buildspec-cleanup.yml Build completed on `date`
+artifacts:
+  files:
+    - '**/*'
